@@ -15,3 +15,6 @@ Thumbs.db
 *~
 *.swp
 *.tmp
+
+# Local scripts
+push.sh
