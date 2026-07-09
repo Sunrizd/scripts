@@ -1,0 +1,17 @@
+# Logs
+*.log
+logs/
+
+# Environments / secrets
+.env
+.env.*
+*.local
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# Backups and temporary files
+*~
+*.swp
+*.tmp
