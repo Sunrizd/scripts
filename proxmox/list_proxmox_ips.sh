@@ -30,12 +30,12 @@ echo "=================================================="
 echo -e "\n🖥️  [NŒUDS DU CLUSTER]"
 pvecm nodes | awk '$1 ~ /^[0-9]+$/ {print $3}' | while read -r node; do
     node_ip=$(getent hosts "$node" | awk '{print $1}' | head -n 1)
-    [ -z "$node_ip" ] && node_ip=$(pvesh get /nodes/$node/network --output-format json 2>/dev/null | jq -r '.[] | select(.address != null and .active == 1) | .address' | grep '^192\.168\.1\.' | head -n 1)
+    [ -z "$node_ip" ] && node_ip=$(pvesh get /nodes/"$node"/network --output-format json 2>/dev/null | jq -r '.[] | select(.address != null and .active == 1) | .address' | grep '^192\.168\.1\.' | head -n 1)
     
     if [ "$SORT_BY_IP" = true ]; then
         echo "${node_ip} | 🖥️  Node [${node}]" >> "$TMP_ALL"
     else
-        echo -e "   🔹 ${BOLD}${node}${RESET} -> $(color_ip ${node_ip})"
+        echo -e "   🔹 ${BOLD}${node}${RESET} -> $(color_ip "${node_ip}")"
     fi
 done
 
@@ -49,7 +49,7 @@ while read -r vmid node name status; do
     is_dhcp=$(grep -E 'net[0-9]+:' "/etc/pve/nodes/$node/lxc/$vmid.conf" 2>/dev/null | grep -q 'ip=dhcp' && echo "oui" || echo "non")
     
     if [ "$status" == "running" ]; then
-        ips=$(pvesh get /nodes/$node/lxc/$vmid/interfaces --output-format json 2>/dev/null | jq -r '.[] | select(.name != "lo") | .inet // empty' | cut -d/ -f1 | grep '^192\.168\.' | tr '\n' ' ')
+        ips=$(pvesh get /nodes/"$node"/lxc/"$vmid"/interfaces --output-format json 2>/dev/null | jq -r '.[] | select(.name != "lo") | .inet // empty' | cut -d/ -f1 | grep '^192\.168\.' | tr '\n' ' ')
     else
         ips=$(grep -E 'net[0-9]+:' "/etc/pve/nodes/$node/lxc/$vmid.conf" 2>/dev/null | grep -oE 'ip=[0-9./]+' | cut -d= -f2 | grep '^192\.168\.' | tr '\n' ' ')
     fi
@@ -60,7 +60,7 @@ while read -r vmid node name status; do
         if [ "$status" == "running" ]; then
             net_type="[${GREEN}Static${RESET}]"; [ "$is_dhcp" == "oui" ] && net_type="[${CYAN}DHCP${RESET}]"
             colored_ips=""
-            for ip in $ips; do colored_ips+="$(color_ip $ip) "; done
+            for ip in $ips; do colored_ips+="$(color_ip "$ip") "; done
             [ -z "$ips" ] && colored_ips="${YELLOW}⚠️ (Aucune IP LAN)${RESET}"
             echo -e "   🔸 CT $vmid [$name] sur $node -> $net_type $colored_ips"
         else
@@ -75,7 +75,7 @@ if [ "$SORT_BY_IP" = false ]; then echo -e "\n🚀 [MACHINES VIRTUELLES (VMs)]";
 while read -r vmid node name status; do
     [ -z "$vmid" ] && continue
     if [ "$status" == "running" ]; then
-        raw_ips=$(pvesh get /nodes/$node/qemu/$vmid/agent/network-get-interfaces --output-format json 2>/dev/null | \
+        raw_ips=$(pvesh get /nodes/"$node"/qemu/"$vmid"/agent/network-get-interfaces --output-format json 2>/dev/null | \
             jq -r '.result[]? | select(.name != "lo" and (.name | startswith("veth") | not) and (.name | startswith("br-") | not) and (.name | startswith("docker") | not)) | .["ip-addresses"][]? | select(.["ip-address-type"] == "ipv4") | .["ip-address"]' 2>/dev/null | \
             grep '^192\.168\.')
         
@@ -83,7 +83,7 @@ while read -r vmid node name status; do
             for ip in $raw_ips; do echo "${ip} | 🚀 VM $vmid [$name] (${node})" >> "$TMP_ALL"; done
         else
             output_ips=""
-            for ip in $raw_ips; do output_ips+="$(color_ip $ip) "; done
+            for ip in $raw_ips; do output_ips+="$(color_ip "$ip") "; done
             [ -z "$output_ips" ] && output_ips="${YELLOW}⚠️  (Pas d'IP LAN / Agent non prêt)${RESET}"
             echo -e "   🔹 VM $vmid [$name] sur $node -> $output_ips"
         fi
@@ -98,7 +98,7 @@ if [ "$SORT_BY_IP" = true ]; then
     sort -V "$TMP_ALL" | grep -v '^ ' | while read -r line; do
         ip=$(echo "$line" | cut -d'|' -f1 | tr -d ' ')
         details=$(echo "$line" | cut -d'|' -f2-)
-        echo -e "   ➡️  $(color_ip $ip) -> $details"
+        echo -e "   ➡️  $(color_ip "$ip") -> $details"
     done
 fi
 
